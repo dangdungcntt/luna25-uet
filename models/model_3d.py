@@ -235,7 +235,7 @@ class I3D(torch.nn.Module):
                 use_bn=False,
             )
             # load model
-            self.load_state_dict(torch.load(config.MODEL_RGB_I3D))
+            self.load_state_dict(torch.load(config.MODEL_RGB_I3D, weights_only=True))
 
         # freeze batchnorm
         self.train()

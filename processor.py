@@ -117,7 +117,7 @@ class MalignancyProcessor:
             cls_model = self.base_cls
             model_path = os.path.join(fold_path, 'best_ckpt.pth')
             # print(f"Use model {model_path}")
-            ckpt = torch.load(model_path, map_location=self.device)['state_dict']
+            ckpt = torch.load(model_path, map_location=self.device, weights_only=True)['state_dict']
             cls_model.load_state_dict(ckpt)
             with torch.no_grad():
                 logits = cls_model(tensor)[0]   # get class prediction logit
