@@ -1,25 +1,17 @@
-import time
+import os
 import tempfile
-from typing import Optional
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.responses import JSONResponse
-import uvicorn
+import time
 import torch
+import uvicorn
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi.responses import JSONResponse, RedirectResponse
 from inference import NoduleProcessor
-
-# ------------------------------------------------------
-# Placeholder: Load your model here (once)
-# ------------------------------------------------------
-# Example:
-# from model.inference import load_model, predict_lesion
-# model = load_model()
+from typing import Optional
 
 app = FastAPI(title="LUNA25 Lesion Inference API")
-device = "cuda:0" if torch.cuda.is_available() else "cpu"
+DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
+THRESHOLD = float(os.environ.get("THRESHOLD", 0.7))
 
-# ------------------------------------------------------
-# Helper: run inference (replace with your real pipeline)
-# ------------------------------------------------------
 def run_inference(
     file_path: str,
     series_uid: str,
@@ -55,18 +47,15 @@ def run_inference(
                                 clinical_information=input_clinical_information,
                                 mode="3D",
                                 model_name="I3D_UNet-3D-20251208_090637-cls-BCEDice",
-                                device=device)
+                                device=DEVICE)
     image, coords, _ = processor.load_inputs()
     output = processor.predict(image, coords)
     
     probability = float(output[0])
-    label = 1 if probability > 0.5 else 0
+    label = 1 if probability > THRESHOLD else 0
     return probability, label
 
 
-# ------------------------------------------------------
-# API Endpoint
-# ------------------------------------------------------
 @app.post("/api/v1/predict/lesion")
 async def predict_lesion(
     file: UploadFile = File(...),
@@ -133,8 +122,9 @@ async def predict_lesion(
     )
 
 
-# ------------------------------------------------------
-# Run with: python api.py
-# ------------------------------------------------------
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/docs")
+
 if __name__ == "__main__":
-    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("api:app", host="0.0.0.0", port=os.environ.get("PORT", 8000), reload=False)
